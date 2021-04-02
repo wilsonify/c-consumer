@@ -1,0 +1,5 @@
+[requires]
+rabbitmq-c/0.10.0
+
+[generators]
+cmake
