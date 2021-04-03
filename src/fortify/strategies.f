@@ -1,12 +1,13 @@
         module m_strategy_pattern
+        use iso_c_binding
         implicit none
 
-        type :: Button
+        type :: Strategy
             character(len=20) :: label
             procedure(generic_function), pointer, nopass :: on_submit
         contains
             procedure :: init
-        end type Button
+        end type Strategy
 
         abstract interface
             subroutine generic_function(numbers)
@@ -17,7 +18,7 @@
         contains
 
             subroutine init(self, func, label)
-                class(Button), intent(inout) :: self
+                class(Strategy), intent(inout) :: self
                 procedure(generic_function) :: func
                 character(len=*) :: label
 
@@ -29,7 +30,6 @@
             subroutine summation(array)
                 integer, dimension(:), intent(in) :: array
                 integer :: total
-
                 total = sum(array)
                 write(*,*) total
             end subroutine summation
@@ -45,13 +45,13 @@
         use m_strategy_pattern
         implicit none
 
-            type(Button) :: button1, button2
+            type(Strategy) :: summation_strat, join_strat
             integer :: i
 
-            call button1%init(summation, "Add them")
-            call button2%init(join, "Join them")
+            call summation_strat%init(summation, "Add them")
+            call join_strat%init(join, "Join them")
 
-            call button1%on_submit([(i, i=1,10)])   !! Array constructor syntax
-            call button2%on_submit([(i, i=1,10)])
+            call summation_strat%on_submit([(i, i=1,10)])   !! Array constructor syntax
+            call join_strat%on_submit([(i, i=1,10)])
 
         end program test_strategy
