@@ -10,3 +10,5 @@ tsunami: tsunami.f90
 
 clean:
 	$(RM) tsunami
+	$(RM) output.txt
+	$(RM) water_height_ch02.svg
