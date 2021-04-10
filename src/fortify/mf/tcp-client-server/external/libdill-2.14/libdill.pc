@@ -1,0 +1,12 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libdill
+Description: coroutine library
+URL: http://libdill.org/
+Version: 25.0.5
+Requires:
+Libs: -L${libdir} -ldill -lrt 
+Cflags: -I${includedir}
