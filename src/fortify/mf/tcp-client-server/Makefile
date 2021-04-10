@@ -4,7 +4,7 @@ CC = gcc
 FC = gfortran
 FCFLAGS = -Wall -Wextra -std=f2018 -pedantic -fcheck=all
 
-OBJS = mod_dill.o libdill.a
+OBJS = mod_dill.o external/libdill.a
 
 .PHONY: all clean
 .SUFFIXES: .f90 .o
@@ -12,16 +12,13 @@ OBJS = mod_dill.o libdill.a
 all: client server
 
 client: client.f90 $(OBJS)
-	$(FC) $(FCFLAGS) $< -o $@ libdill.a -pthread
+	$(FC) $(FCFLAGS) $< -o $@ external/libdill.a -pthread
 
 server: server.f90 $(OBJS)
-	$(FC) $(FCFLAGS) $< -o $@ libdill.a -pthread
+	$(FC) $(FCFLAGS) $< -o $@ external/libdill.a -pthread
 
-libdill-2.14:
-	curl http://libdill.org/libdill-2.14.tar.gz | tar xz
-
-libdill.a: libdill-2.14
-	cd libdill-2.14 && ./configure && make && cp .libs/libdill.a ..
+external/libdill.a: external/libdill-2.14
+	cd external/libdill-2.14 && ./configure && make && cp .libs/libdill.a ..
 
 .f90.o:
 	$(FC) $(FCFLAGS) -c $<
