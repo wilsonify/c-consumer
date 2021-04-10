@@ -62,3 +62,7 @@ dist/
 *.cbp
 *.depend
 *.layout
+*.mod
+
+# large data files
+*.dat
