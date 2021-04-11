@@ -2,7 +2,7 @@
 
 Dockerfile to build a modern-fortran Docker image.
 It's based off Ubuntu 18.04 and installs gfortran, OpenMPI, and OpenCoarrays for you.
-It will also git clone the modern-fortran projects.
+
 
 You will need Docker set up and running on your system.
 
