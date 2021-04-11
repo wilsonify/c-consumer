@@ -1,0 +1,4 @@
+[cli]
+bears = GNUIndentBear
+files = main.c
+non_interactive = True
