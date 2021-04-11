@@ -111,19 +111,16 @@ int main (int argc, char const *const *argv) {
   char const *hostname;
   int port;
   int status;
-  char const *exchange;
-  char const *queuename;
   char const *bindingkey;
 
-  amqp_exchange_declare_ok_t *exchange_struct;
-  amqp_queue_declare_ok_t *queue_struct;
+  amqp_queue_declare_ok_t *try_queue_struct;
+  amqp_queue_declare_ok_t *done_queue_struct;
+  amqp_queue_declare_ok_t *fail_queue_struct;
   amqp_socket_t *socket = NULL;
   amqp_connection_state_t conn;
 
   hostname = "localhost";
   port = atoi("32777");
-  exchange = "try-c-consumer";
-  queuename = "try-c-consumer";
   bindingkey = "c-consumer";
 
   printf("connecting\n");
@@ -160,10 +157,10 @@ int main (int argc, char const *const *argv) {
 
   die_on_amqp_error(amqp_get_rpc_reply(conn), "Opening channel");
 
-  exchange_struct = amqp_exchange_declare(
+  amqp_exchange_declare(
       conn, // state - connection state
       1,  // channel - the channel to do the RPC on
-      amqp_cstring_bytes(exchange), // exchange
+      amqp_cstring_bytes("try-c-consumer"), // exchange
       amqp_cstring_bytes("topic"), // type
       0, // passive
       0, // durable
@@ -171,11 +168,53 @@ int main (int argc, char const *const *argv) {
       0, // internal
       amqp_empty_table // arguments
     );
+  amqp_exchange_declare(
+      conn, // state - connection state
+      1,  // channel - the channel to do the RPC on
+      amqp_cstring_bytes("done-c-consumer"), // exchange
+      amqp_cstring_bytes("topic"), // type
+      0, // passive
+      0, // durable
+      0, // auto_delete
+      0, // internal
+      amqp_empty_table // arguments
+    );
+  amqp_exchange_declare(
+      conn, // state - connection state
+      1,  // channel - the channel to do the RPC on
+      amqp_cstring_bytes("fail-c-consumer"), // exchange
+      amqp_cstring_bytes("topic"), // type
+      0, // passive
+      0, // durable
+      0, // auto_delete
+      0, // internal
+      amqp_empty_table // arguments
+  );
 
-  queue_struct = amqp_queue_declare(
+  try_queue_struct = amqp_queue_declare(
         conn, // state - connection state
         1, // channel - the channel to do the RPC on
-        amqp_cstring_bytes(queuename), // queue - queue
+        amqp_cstring_bytes("try-c-consumer"), // queue - queue
+        0, // passive - passive
+        0, // durable - durable
+        0, // exclusive - exclusive
+        0, // auto_delete - auto_delete
+        amqp_empty_table // arguments - arguments
+    );
+  done_queue_struct = amqp_queue_declare(
+        conn, // state - connection state
+        1, // channel - the channel to do the RPC on
+        amqp_cstring_bytes("done-c-consumer"), // queue - queue
+        0, // passive - passive
+        0, // durable - durable
+        0, // exclusive - exclusive
+        0, // auto_delete - auto_delete
+        amqp_empty_table // arguments - arguments
+    );
+  fail_queue_struct = amqp_queue_declare(
+        conn, // state - connection state
+        1, // channel - the channel to do the RPC on
+        amqp_cstring_bytes("fail-c-consumer"), // queue - queue
         0, // passive - passive
         0, // durable - durable
         0, // exclusive - exclusive
@@ -183,35 +222,61 @@ int main (int argc, char const *const *argv) {
         amqp_empty_table // arguments - arguments
     );
 
-
-
-
-  printf("consumer_count");
-
-
-
+  printf("set quality of service\n");
 
   amqp_basic_qos(
     conn, // state - connection state
     1, // channel - the channel to do the RPC on
-    1, // prefetch_size
+    0, // prefetch_size
+     /* This field specifies the prefetch window size.
+     The server will send a message in advance if it is equal to or smaller in size than the available prefetch size
+     (and also falls into other prefetch limits).
+     May be set to zero, meaning "no specific limit", although other prefetch limits may still apply.
+     The prefetch-size is ignored if the no-ack option is set in the consumer.
+    */
     1, // prefetch_count
-    1 // global
+     /* Specifies a prefetch window in terms of whole messages.
+     This field may be used in combination with the prefetch-size field;
+     a message will only be sent in advance if both prefetch windows
+     (and those at the channel and connection level) allow it.
+     The prefetch-count is ignored if the no-ack option is set in the consumer.
+     */
+    0 // global
   );
 
+  printf("bind queues to exchange \n");
   amqp_queue_bind(
     conn, // state - connection state
     1, // channel - the channel to do the RPC on
-    amqp_cstring_bytes(queuename), // queue
-    amqp_cstring_bytes(exchange), // exchange
+    amqp_cstring_bytes("try-c-consumer"), // queue
+    amqp_cstring_bytes("try-c-consumer"), // exchange
     amqp_cstring_bytes(bindingkey), // routing_key
     amqp_empty_table // arguments - arguments
     );
 
+  amqp_queue_bind(
+    conn, // state - connection state
+    1, // channel - the channel to do the RPC on
+    amqp_cstring_bytes("done-c-consumer"), // queue
+    amqp_cstring_bytes("done-c-consumer"), // exchange
+    amqp_cstring_bytes(bindingkey), // routing_key
+    amqp_empty_table // arguments - arguments
+    );
+  amqp_queue_bind(
+    conn, // state - connection state
+    1, // channel - the channel to do the RPC on
+    amqp_cstring_bytes("fail-c-consumer"), // queue
+    amqp_cstring_bytes("fail-c-consumer"), // exchange
+    amqp_cstring_bytes(bindingkey), // routing_key
+    amqp_empty_table // arguments - arguments
+    );
+
+  printf("consume \n");
+
   amqp_basic_consume(
     conn, // state - connection state
     1, // channel - the channel to do the RPC on
-    queue_struct->queue, // queue
+    try_queue_struct->queue, // queue
     amqp_empty_bytes, // consumer_tag
     0, // no_local
     1, // no_ack
@@ -219,8 +284,11 @@ int main (int argc, char const *const *argv) {
     amqp_empty_table // arguments
   );
 
+  printf("start consuming \n");
   run(conn);
+  printf("stop consuming \n");
 
+  printf("clean up\n");
   die_on_amqp_error(amqp_channel_close(
        conn, // state - the connection object
        1, // channel - the channel identifier
